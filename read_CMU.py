@@ -2,8 +2,12 @@ import pandas as pd
 import os
 import tweepy
 from dotenv import load_dotenv
+import os
+import botometer
 
 load_dotenv()
+
+rapidapi_key = os.environ["RAPID_KEY"]
 
 consumer_key = os.environ["API_KEY"]
 consumer_secret = os.environ["API_KEY_SECRET"]
@@ -18,6 +22,11 @@ auth = tweepy.OAuth1UserHandler(
 )
 
 api = tweepy.API(auth)
+bom = botometer.Botometer(wait_on_ratelimit=True,
+                          rapidapi_key=rapidapi_key,
+                          **auth)
+
+result = bom.check_account()
 
 
 def get_info(tweet_id):
@@ -57,3 +66,4 @@ true_tweets_df=pd.DataFrame(true_tweets)
 true_tweets_df['label']=1
 
 final_df=pd.concat((true_tweets_df,false_tweets_df))
+final_df.to_csv('./SM_data/CMU_tweets.csv',sep='\t',index=False)
