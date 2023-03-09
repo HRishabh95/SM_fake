@@ -15,9 +15,11 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-training = 3
-# 1 cleaned tweet, 2 cleaned User descirption and Tweet, 3 Cleaned user info and Tweet, 4 Tweet info and Tweet, 5 Combined
+training = 5
 
+# 1 cleaned tweet, 2 cleaned User descirption and Tweet, 3 Cleaned user info and Tweet, 4 Tweet info and Tweet, 5 Combined
+injection = 2
+# 1 for one value, 2 for 2 value, 3 for all values
 data_path = f'''./SM_data/CMU_tweets_folds.csv'''
 dataset = datasets.load_dataset("csv", data_files={"train": [data_path]}, delimiter='\t', lineterminator='\n')
 
@@ -44,6 +46,35 @@ def do_z_score(df):
     return np.round(np_df_z_score,4)
 
 
+def get_injection_value_user(injection):
+    if injection == 1:
+        injection_value = f'''{clean_text(row['user_description'])}[SEP] {row['user_follower_zscore']}'''
+    elif injection == 2:
+        injection_value = f'''{clean_text(row['user_description'])}[SEP] {row['user_follower_zscore']} [SEP] {row['user_friend_zscore']}'''
+    else:
+        injection_value = f'''{clean_text(row['user_description'])}[SEP] {row['user_follower_zscore']} [SEP] {row['user_friend_zscore']} [SEP] {row['user_verfied']}'''
+    return injection_value
+
+
+def get_injection_value_tweet(injection):
+    if injection == 1:
+        injection_value = f'''{row['favourite_zscore']} [SEP] {clean_text(row['Tweet'])}'''
+    else:
+        injection_value=f'''{row['favourite_zscore']} [SEP] {row['retweet_zscore']} [SEP] {clean_text(row['Tweet'])}'''
+    return injection_value
+
+def get_extension(training):
+    if training == 1:
+        extension = 'tweet_cleaned'
+    elif training == 2:
+        extension = 'user_desc'
+    elif training == 3:
+        extension = 'user_info'
+    elif training == 4:
+        extension = 'tweet_cleaned_info'
+    elif training == 5:
+        extension = 'combined'
+    return extension
 def do_min_max(df):
     np_df=np.asarray(df)
     np_df_min_max=(np_df - np_df.min()) /(np_df.max() - np_df.min())
@@ -87,8 +118,12 @@ if use_z_score:
 use_min_max=False
 if use_min_max:
     ext_normalise='minmax'
+
+
+
+
 for train_batch_size in [1]:
-    for num_epochs in [2,3,4,5,6]:
+    for num_epochs in [5,6]:
         print(train_batch_size, num_epochs)
         score = []
         f1 = []
@@ -118,19 +153,19 @@ for train_batch_size in [1]:
                             if use_z_score:
                                 train_samples.append(InputExample(
                                     texts=[
-                                        f'''{clean_text(row['user_description'])}[SEP] {row['user_follower_zscore']} [SEP] {row['user_friend_zscore']} [SEP] {row['user_verfied']}''',
+                                        get_injection_value_user(injection),
                                         f'''{clean_text(row['Tweet'])}'''],
                                     label=row['label']))
                             elif use_min_max:
                                 train_samples.append(InputExample(
                                     texts=[
-                                        f'''{clean_text(row['user_description'])}[SEP] {row['user_follower_min_max']} [SEP] {row['user_friend_min_max']} [SEP] {row['user_verfied']}''',
+                                        get_injection_value_user(injection),
                                         f'''{clean_text(row['Tweet'])}'''],
                                     label=row['label']))
                             else:
                                 train_samples.append(InputExample(
                                     texts=[
-                                        f'''{clean_text(row['user_description'])}[SEP] {row['user_follower']} [SEP] {row['user_friend']} [SEP] {row['user_verfied']}''',
+                                       get_injection_value_user(injection),
                                         f'''{clean_text(row['Tweet'])}'''],
                                     label=row['label']))
 
@@ -139,7 +174,7 @@ for train_batch_size in [1]:
                         train_samples.append(InputExample(
                             texts=[
                                 f'''''',
-                                f'''{row['favourite_zscore']} [SEP] {row['retweet_zscore']} [SEP] {clean_text(row['Tweet'])}'''],
+                               get_injection_value_tweet(injection)],
                             label=row['label']))
 
                     elif use_min_max:
@@ -162,8 +197,8 @@ for train_batch_size in [1]:
                             if use_z_score:
                                 train_samples.append(InputExample(
                                     texts=[
-                                        f'''{clean_text(row['user_description'])}[SEP] {row['user_follower_zscore']} [SEP] {row['user_friend_zscore']} [SEP] {row['user_verfied']}''',
-                                        f'''{row['favourite_zscore']} [SEP] {row['retweet_zscore']} [SEP] {clean_text(row['Tweet'])}'''],
+                                        get_injection_value_user(injection),
+                                        get_injection_value_tweet(injection)],
                                     label=row['label']))
                             elif use_min_max:
                                 train_samples.append(InputExample(
@@ -197,7 +232,7 @@ for train_batch_size in [1]:
                             if use_z_score:
                                 dev_samples.append(InputExample(
                                     texts=[
-                                        f'''{clean_text(row['user_description'])}[SEP] {row['user_follower_zscore']} [SEP] {row['user_friend_zscore']} [SEP] {row['user_verfied']}''',
+                                        get_injection_value_user(injection),
                                         f'''{clean_text(row['Tweet'])}'''],
                                     label=row['label']))
                             elif use_min_max:
@@ -218,7 +253,7 @@ for train_batch_size in [1]:
                         dev_samples.append(InputExample(
                             texts=[
                                 f'''''',
-                                f'''{row['favourite_zscore']} [SEP] {row['retweet_zscore']} [SEP] {clean_text(row['Tweet'])}'''],
+                                get_injection_value_tweet(injection)],
                             label=row['label']))
 
                     elif use_min_max:
@@ -240,8 +275,8 @@ for train_batch_size in [1]:
                             if use_z_score:
                                 dev_samples.append(InputExample(
                                     texts=[
-                                        f'''{clean_text(row['user_description'])}[SEP] {row['user_follower_zscore']} [SEP] {row['user_friend_zscore']} [SEP] {row['user_verfied']}''',
-                                        f'''{row['favourite_zscore']} [SEP] {row['retweet_zscore']} [SEP] {clean_text(row['Tweet'])}'''],
+                                        get_injection_value_user(injection),
+                                        get_injection_value_tweet(injection)],
                                     label=row['label']))
                             elif use_min_max:
                                 dev_samples.append(InputExample(
@@ -259,17 +294,8 @@ for train_batch_size in [1]:
             torch.manual_seed(47)
 
             model_name = 'bert-base-uncased'
-            if training == 1:
-                extension = 'tweet_cleaned'
-            elif training == 2:
-                extension = 'user_desc'
-            elif training == 3:
-                extension = 'user_info'
-            elif training == 4:
-                extension = 'tweet_cleaned_info'
-            elif training == 5:
-                extension = 'combined'
-            model_save_path = f'''output/training_SM_1_{extension}_{ext_normalise}_{model_name.split("/")[-1]}_{train_batch_size}_{num_epochs}_{folds}'''
+            extension=get_extension(training)
+            model_save_path = f'''output/training_SM_1_{extension}_{ext_normalise}_{injection}_{model_name.split("/")[-1]}_{train_batch_size}_{num_epochs}_{folds}'''
             # model_save_path = f'''output/training_{extension}_biobert_{train_batch_size}_{num_epochs}_{folds}'''
 
             evaluator = CESoftmaxAccuracyEvaluator.from_input_examples(dev_samples,
@@ -309,7 +335,7 @@ for train_batch_size in [1]:
                         if len(row['user_description']) > 1:
                             if use_z_score:
                                 eval_set.append([
-                                    f'''{clean_text(row['user_description'])}[SEP] {row['user_follower_zscore']} [SEP] {row['user_friend_zscore']} [SEP] {row['user_verfied']}''',
+                                    get_injection_value_user(injection),
                                     f'''{clean_text(row['Tweet'])}'''])
                                 labels.append(row['label'])
                             elif use_min_max:
@@ -326,7 +352,7 @@ for train_batch_size in [1]:
                     if use_z_score:
                         eval_set.append([
                             f'''''',
-                            f'''{row['favourite_zscore']} [SEP] {row['retweet_zscore']} [SEP] {clean_text(row['Tweet'])}'''])
+                            get_injection_value_tweet(injection)])
                         labels.append(row['label'])
                     elif use_min_max:
                         eval_set.append([
@@ -343,8 +369,8 @@ for train_batch_size in [1]:
                         if len(row['user_description']) > 1:
                             if use_z_score:
                                 eval_set.append([
-                                        f'''{clean_text(row['user_description'])}[SEP] {row['user_follower_zscore']} [SEP] {row['user_friend_zscore']} [SEP] {row['user_verfied']}''',
-                                        f'''{row['favourite_zscore']} [SEP] {row['retweet_zscore']} [SEP] {clean_text(row['Tweet'])}'''])
+                                        get_injection_value_user(injection),
+                                        get_injection_value_tweet(injection)])
                                 labels.append(row['label'])
                             elif use_min_max:
                                 eval_set.append([
@@ -367,7 +393,7 @@ for train_batch_size in [1]:
         precisions.append(precision)
 
 mean_scores=[]
-filename=f'''./output/{model_name.split("/")[-1]}_{extension}_type_result.csv'''
+filename=f'''{model_save_path}/{model_name.split("/")[-1]}_{extension}_type_result.csv'''
 for i in [scores,f1s,recalls,precisions]:
     mean_score=[]
     for score in i:
