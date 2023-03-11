@@ -3,12 +3,12 @@ import os
 import tweepy
 from dotenv import load_dotenv
 import os
-import botometer
 from tqdm import tqdm
+import botometer
 
 load_dotenv()
 
-# rapidapi_key = os.environ["RAPID_KEY"]
+rapidapi_key = os.environ["RAPID_KEY"]
 
 consumer_key = os.environ["API_KEY"]
 consumer_secret = os.environ["API_KEY_SECRET"]
@@ -25,15 +25,22 @@ auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
 
 api = tweepy.API(auth)
-# bom = botometer.Botometer(wait_on_ratelimit=True,
-#                           rapidapi_key=rapidapi_key,
-#                           **auth)
-#
-# result = bom.check_account()
+twitter_app_auth = {
+    'consumer_key': consumer_key,
+    'consumer_secret': consumer_secret,
+    'access_token': access_token,
+    'access_token_secret': access_token_secret,
+  }
+bom = botometer.Botometer(wait_on_ratelimit=True,
+                          rapidapi_key=rapidapi_key,
+                          **twitter_app_auth)
+
+result = bom.check_account(903394670935293953)
 
 
 def get_info(tweet_id):
     info_tweet = api.get_status(tweet_id, tweet_mode="extended")
+
     return {'ID': info_tweet.id,
     'Tweet': info_tweet.full_text,
     'Date': info_tweet.created_at,

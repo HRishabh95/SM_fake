@@ -2,7 +2,7 @@ import pandas as pd
 from sklearn import model_selection
 import numpy as np
 
-data_path=f'''./SM_data/SM_1_tweets.csv'''
+data_path=f'''./SM_data/ginger_tweets.csv'''
 data=pd.read_csv(data_path,sep='\t', lineterminator='\n')
 
 
@@ -40,6 +40,6 @@ df = create_folds(data, num_splits=5)
 
 print(df.kfold.value_counts())
 
-save_path=f'''./SM_data/SM_1_tweets_folds.csv'''
+save_path=f'''./SM_data/ginger_tweets_folds.csv'''
 
 df.to_csv(save_path,sep='\t', index=False)

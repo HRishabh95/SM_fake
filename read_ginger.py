@@ -3,45 +3,24 @@ import os
 import tweepy
 from dotenv import load_dotenv
 import os
-import botometer
+import json
 
 
 load_dotenv()
-
-rapidapi_key = os.environ["RAPID_KEY"]
 
 consumer_key = os.environ["API_KEY"]
 consumer_secret = os.environ["API_KEY_SECRET"]
 access_token = os.environ["ACCESS_TOKEN"]
 access_token_secret = os.environ["ACCESS_TOKEN_SECRET"]
 
-# auth = tweepy.OAuth1UserHandler(
-#   consumer_key,
-#   consumer_secret,
-#   access_token,
-#   access_token_secret
-# )
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
 
 api = tweepy.API(auth)
-twitter_app_auth = {
-    'consumer_key': consumer_key,
-    'consumer_secret': consumer_secret,
-    'access_token': access_token,
-    'access_token_secret': access_token_secret,
-  }
-bom = botometer.Botometer(wait_on_ratelimit=True,
-                          rapidapi_key=rapidapi_key,
-                          **twitter_app_auth)
-
 
 def get_info(tweet_id):
     info_tweet = api.get_status(tweet_id, tweet_mode="extended")
-    try:
-        user_info = bom.check_account(info_tweet.user.id_str)
-    except:
-        user_info=None
+    user_info=None
     if user_info:
         fake_follower_score=user_info['raw_scores']['english']['fake_follower']
         spammer_score=user_info['raw_scores']['english']['spammer']
@@ -80,28 +59,48 @@ def get_info(tweet_id):
                 'self_declared':0,
                 'overall':0,
                 'spammer_score': 0}
+news=json.load(open('/home/ricky/PycharmProjects/SM_fakenews/SM_data/Ginger/FakeHealth-master/dataset/reviews/HealthRelease.json','rb'))
+tweet=json.load(open('/home/ricky/PycharmProjects/SM_fakenews/SM_data/Ginger/FakeHealth-master/dataset/engagements/HealthRelease.json','rb'))
+labels=[]
+for new in news:
+    tweets = tweet[new['news_id']]['tweets']
+    if new['rating']>3:
+        for twt in tweets:
+            labels.append([new['news_id'],twt,0])
+    else:
+        for twt in tweets:
+            labels.append([new['news_id'], twt, 1])
 
-cmu_misinfo=pd.read_csv("/home/ricky/PycharmProjects/SM_fakenews/SM_data/CMU_MisCov19_dataset.csv",sep=',')
+news = json.load(
+    open('/home/ricky/PycharmProjects/SM_fakenews/SM_data/Ginger/FakeHealth-master/dataset/reviews/HealthStory.json',
+         'rb'))
+tweet=json.load(open('/home/ricky/PycharmProjects/SM_fakenews/SM_data/Ginger/FakeHealth-master/dataset/engagements/HealthStory.json','rb'))
 
-true_tweets=[]
-false_tweets=[]
+for new in news:
+    tweets = tweet[new['news_id']]['tweets']
+    if new['rating'] > 3:
+        for twt in tweets:
+            labels.append([new['news_id'], twt, 0])
+    else:
+        for twt in tweets:
+            labels.append([new['news_id'], twt, 1])
+
+
+import random
+final_df=pd.DataFrame(labels,columns=['news_id','tweet_id','label']).sample(n=100000,random_state=47)
+
+final_tweets_info=[]
 count=0
-for ii,rows in cmu_misinfo.iterrows():
+for ii,rows in final_df.iterrows():
     print(ii)
     try:
-        if 'false' in rows['annotation1'] or 'fake' in rows['annotation1']:
-            false_tweets.append(get_info(rows['status_id']))
-
-        elif 'true' in rows['annotation1']:
-            true_tweets.append(get_info(rows['status_id']))
+        final_tweets_info.append(get_info(rows['tweet_id']))
     except:
         count+=1
 
-false_tweets_df=pd.DataFrame(false_tweets)
-false_tweets_df['label']=0
+final_tweets_info_df=pd.DataFrame(final_tweets_info)
 
-true_tweets_df=pd.DataFrame(true_tweets)
-true_tweets_df['label']=1
+final_df.columns=['news_id', 'ID', 'label']
+label_df=final_tweets_info_df.merge(final_df,on=['ID'])
 
-final_df=pd.concat((true_tweets_df,false_tweets_df))
-final_df.to_csv('./SM_data/CMU_tweets.csv',sep='\t',index=False)
+label_df.to_csv('./SM_data/ginger_tweets.csv',sep='\t',index=False)
