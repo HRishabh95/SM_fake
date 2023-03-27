@@ -1,24 +1,20 @@
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import transformers
-import numpy as np
-import pandas as pd
-from nltk.tokenize import TweetTokenizer
-import random
 import emoji
 from cleantext import clean
 import logging
 logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
 logging.getLogger().setLevel(logging.INFO)
-
-
-import os
 import pandas as pd
 import numpy as np
+import shap
+d=pd.read_csv('./SM_data/ginger_tweets_folds.csv',sep='\t',lineterminator='\n')
+df=d[d['kfold']==0]
 
-
-model_name= '/home/ricky/PycharmProjects/SM_fakenews/output/training_ginger_combined_covid-twitter-bert-v2_1_3_0/'
+model_name= '/home/ricky/PycharmProjects/SM_fakenews/output/training_ginger_combined_covid-twitter-bert-v2_1_6_0/'
 tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=True,max_length=510,truncation=True,padding=True,add_special_tokens=True)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
+pred = transformers.pipeline("text-classification", model=model, tokenizer=tokenizer, device=0, return_all_scores=True)
 
 def clean_text(tweet):
     tweet = emoji.demojize(tweet, delimiters=("", ""))
@@ -34,9 +30,7 @@ def clean_text(tweet):
                  no_punct=True)
 
 
-import shap
-d=pd.read_csv('./SM_data/CMU_tweets_folds.csv',sep='\t')
-df=d[d['kfold']==0]
+
 
 def do_z_score(df):
     np_df=np.asarray(df)
@@ -58,9 +52,8 @@ for row in df.iterrows():
     if type(row['user_description']) is str:
 
         injection_value=f'''{clean_text(row['user_description'])}[SEP] {row['user_follower_zscore']} [SEP] {row['user_friend_zscore']} [SEP] {row['user_verfied']} [SEP] {row['favourite_zscore']} [SEP] {row['retweet_zscore']} [SEP] {clean_text(row['Tweet'])}'''
-        input_text.append(injection_value)
+        input_text.append([injection_value,row['label']])
 
-pred = transformers.pipeline("text-classification", model=model, tokenizer=tokenizer, device=0, return_all_scores=True)
 
 
 masker=shap.maskers.Text(tokenizer=tokenizer)
@@ -68,7 +61,11 @@ masker=shap.maskers.Text(tokenizer=tokenizer)
 label_names = ["Retrieve", "Non Relevent"]
 
 explainer = shap.Explainer(pred,masker=masker,seed=47)
-shap_values= explainer([input_text[0]])
+for ii,i in enumerate(input_text[:15]):
+    shap_values= explainer([i[0]])
 
+    file = open('./SHAP/%s_%s.html'%(ii,i[1]),'w')
+    file.write(shap.plots.text(shap_values,display=False))
+    file.close()
 
 #3,37, 41
