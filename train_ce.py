@@ -1,7 +1,6 @@
 
 import math
 import os.path
-from scipy.stats import zscore
 
 import datasets
 import emoji
@@ -18,13 +17,13 @@ from tqdm import tqdm
 training = 5
 
 # 1 cleaned tweet, 2 cleaned User descirption and Tweet, 3 Cleaned user info and Tweet, 4 Tweet info and Tweet, 5 Combined
-injection = 2
+injection = 3
 # 1 for one value, 2 for 2 value, 3 for all values
 data_path = f'''./SM_data/CMU_tweets_folds.csv'''
 dataset = datasets.load_dataset("csv", data_files={"train": [data_path]}, delimiter='\t', lineterminator='\n')
 
 label2int = {"NonCredible": 0, "Credible": 1}
-
+dataset_used='ginger'
 
 def clean_text(tweet):
     tweet = emoji.demojize(tweet, delimiters=("", ""))
@@ -123,7 +122,7 @@ if use_min_max:
 
 
 for train_batch_size in [1]:
-    for num_epochs in [5,6]:
+    for num_epochs in [4]:
         print(train_batch_size, num_epochs)
         score = []
         f1 = []
@@ -293,10 +292,20 @@ for train_batch_size in [1]:
 
             torch.manual_seed(47)
 
-            model_name = 'bert-base-uncased'
-            extension=get_extension(training)
-            model_save_path = f'''output/training_SM_1_{extension}_{ext_normalise}_{injection}_{model_name.split("/")[-1]}_{train_batch_size}_{num_epochs}_{folds}'''
-            # model_save_path = f'''output/training_{extension}_biobert_{train_batch_size}_{num_epochs}_{folds}'''
+            # model_name = 'digitalepidemiologylab/covid-twitter-bert-v2'
+            model_name='bert-base-uncased'
+            if training == 1:
+                extension = 'tweet_cleaned'
+            elif training == 2:
+                extension = 'user_desc'
+            elif training == 3:
+                extension = 'user_info'
+            elif training == 4:
+                extension = 'tweet_cleaned_info'
+            elif training == 5:
+                extension = 'combined'
+            model_save_path = f'''output/training_{dataset_used}_{extension}_{model_name.split("/")[-1]}_{train_batch_size}_{num_epochs}_{folds}'''
+            # model_save_path = f'''output/training_{e}xtension}_biobert_{train_batch_size}_{num_epochs}_{folds}'''
 
             evaluator = CESoftmaxAccuracyEvaluator.from_input_examples(dev_samples,
                                                                        name=f'''{model_name.split("/")[-1]}_{train_batch_size}_{num_epochs}_{ext_normalise}''')

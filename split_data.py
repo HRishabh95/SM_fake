@@ -3,7 +3,7 @@ from sklearn import model_selection
 import numpy as np
 
 data_path=f'''./SM_data/ginger_tweets.csv'''
-data=pd.read_csv(data_path,sep='\t', lineterminator='\n')
+data=pd.read_csv(data_path,sep='\t', lineterminator='\n').sample(5000,random_state=47)
 
 
 def create_folds(data, num_splits):
