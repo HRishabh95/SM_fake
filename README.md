@@ -3,6 +3,13 @@
 BERT Model training for Twitter Fake News Detection on CMU Misinfo, Ginger Cure Covid and FakeHealth Dataset.
 
 
+## Downloading Dataset:
+
+Dataset is publically available. 
+- CMU Misinfo
+- Ginger Cure Covid Dataset
+- FakeHealth Dataset
+
 ## Read Dataset:
 
 ```
@@ -24,3 +31,4 @@ Change the filepath for specific datasets.
 ```
 train_ce.py - Training Cross Encoder with folds files.
 ```
+
